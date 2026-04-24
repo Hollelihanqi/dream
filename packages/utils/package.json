@@ -1,7 +1,12 @@
 {
-  "name": "@dream/utils",
+  "name": "@rdeam/utils",
   "version": "0.1.0",
   "description": "Shared utilities for the dream technology stack.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hollelihanqi/dream.git",
+    "directory": "packages/utils"
+  },
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

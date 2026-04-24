@@ -7,19 +7,19 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --filter @dream/utils build"
+        "command": "pnpm --filter @rdeam/utils build"
       }
     },
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --filter @dream/utils test"
+        "command": "pnpm --filter @rdeam/utils test"
       }
     },
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --filter @dream/utils lint"
+        "command": "pnpm --filter @rdeam/utils lint"
       }
     }
   },

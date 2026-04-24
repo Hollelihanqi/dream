@@ -10,3 +10,7 @@ export function createPackageName(scope: string, name: string): string {
 
   return `@${scope}/${name}`;
 }
+
+export function lihanqi() {
+  console.log('lihanqi');
+}

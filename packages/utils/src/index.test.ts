@@ -4,7 +4,7 @@ import { createPackageName, invariant } from './index';
 
 describe('createPackageName', () => {
   it('creates a scoped package name', () => {
-    expect(createPackageName('dream', 'utils')).toBe('@dream/utils');
+    expect(createPackageName('rdeam', 'utils')).toBe('@rdeam/utils');
   });
 });
 

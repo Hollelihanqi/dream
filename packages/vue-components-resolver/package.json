@@ -1,7 +1,12 @@
 {
-  "name": "@dream/vue-components-resolver",
+  "name": "@rdeam/vue-components-resolver",
   "version": "0.1.0",
   "description": "A Vue component auto-import resolver for app-level src/components entries.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hollelihanqi/dream.git",
+    "directory": "packages/vue-components-resolver"
+  },
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

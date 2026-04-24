@@ -1,5 +1,5 @@
 {
-  "name": "@dream/vite-plugin-element-plus-theme-builder",
+  "name": "@rdeam/vite-plugin-element-plus-theme-builder",
   "version": "0.1.1",
   "description": "Build Element Plus theme CSS with custom colors during Vite serve/build.",
   "type": "module",
@@ -30,16 +30,17 @@
     "scss",
     "plugin"
   ],
-  "author": "lihanqi <lihanqi@xa.reddatetech.com>",
+  "author": "lihanqi <1401009231@qq.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Hollelihanqi/vite-plugin-element-plus-theme-builder.git"
+    "url": "git+https://github.com/Hollelihanqi/dream.git",
+    "directory": "packages/vite-plugin-element-plus-theme-builder"
   },
   "bugs": {
-    "url": "https://github.com/Hollelihanqi/vite-plugin-element-plus-theme-builder/issues"
+    "url": "https://github.com/Hollelihanqi/dream/issues"
   },
-  "homepage": "https://github.com/Hollelihanqi/vite-plugin-element-plus-theme-builder#readme",
+  "homepage": "https://github.com/Hollelihanqi/dream/tree/main/packages/vite-plugin-element-plus-theme-builder#readme",
   "peerDependencies": {
     "element-plus": "^2.0.0",
     "sass": "^1.62.0",

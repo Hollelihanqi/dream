@@ -7,19 +7,19 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --filter @dream/vue-components-resolver build"
+        "command": "pnpm --filter @rdeam/vue-components-resolver build"
       }
     },
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --filter @dream/vue-components-resolver test"
+        "command": "pnpm --filter @rdeam/vue-components-resolver test"
       }
     },
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --filter @dream/vue-components-resolver lint"
+        "command": "pnpm --filter @rdeam/vue-components-resolver lint"
       }
     }
   },

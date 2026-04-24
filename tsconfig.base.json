@@ -3,7 +3,7 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM"],
     "strict": true,
     "declaration": true,
     "declarationMap": true,
@@ -17,11 +17,11 @@
     "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
-      "@dream/vite-plugin-element-plus-theme-builder": [
+      "@rdeam/vite-plugin-element-plus-theme-builder": [
         "packages/vite-plugin-element-plus-theme-builder/src/index.ts"
       ],
-      "@dream/vue-components-resolver": ["packages/vue-components-resolver/src/index.ts"],
-      "@dream/utils": ["packages/utils/src/index.ts"]
+      "@rdeam/vue-components-resolver": ["packages/vue-components-resolver/src/index.ts"],
+      "@rdeam/utils": ["packages/utils/src/index.ts"]
     }
   }
 }

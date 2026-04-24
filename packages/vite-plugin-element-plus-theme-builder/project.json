@@ -7,19 +7,19 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --filter @dream/vite-plugin-element-plus-theme-builder build"
+        "command": "pnpm --filter @rdeam/vite-plugin-element-plus-theme-builder build"
       }
     },
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --filter @dream/vite-plugin-element-plus-theme-builder test"
+        "command": "pnpm --filter @rdeam/vite-plugin-element-plus-theme-builder test"
       }
     },
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --filter @dream/vite-plugin-element-plus-theme-builder lint"
+        "command": "pnpm --filter @rdeam/vite-plugin-element-plus-theme-builder lint"
       }
     }
   },

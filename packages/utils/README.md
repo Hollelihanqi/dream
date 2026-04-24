@@ -1,3 +1,3 @@
-# @dream/utils
+# @rdeam/utils
 
 Shared utilities for the dream technology stack.
