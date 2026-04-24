@@ -1,0 +1,46 @@
+{
+  "name": "dream",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.27.0",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "build": "nx run-many -t build",
+    "test": "nx run-many -t test",
+    "lint": "nx run-many -t lint",
+    "pack:check": "pnpm build && pnpm -r exec publint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "pnpm build && changeset publish",
+    "graph": "nx graph"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "esbuild",
+      "nx"
+    ]
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.31.0",
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^25.6.0",
+    "element-plus": "^2.13.7",
+    "eslint": "^10.2.1",
+    "nx": "^22.6.5",
+    "prettier": "^3.8.3",
+    "publint": "^0.3.18",
+    "sass": "^1.99.0",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.0",
+    "unplugin-vue-components": "^32.0.0",
+    "vite": "^8.0.10",
+    "vitest": "^4.1.5"
+  }
+}

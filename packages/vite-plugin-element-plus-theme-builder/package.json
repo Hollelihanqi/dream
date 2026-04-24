@@ -1,0 +1,57 @@
+{
+  "name": "@dream/vite-plugin-element-plus-theme-builder",
+  "version": "0.1.1",
+  "description": "Build Element Plus theme CSS with custom colors during Vite serve/build.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "keywords": [
+    "vite",
+    "element-plus",
+    "theme",
+    "scss",
+    "plugin"
+  ],
+  "author": "lihanqi <lihanqi@xa.reddatetech.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hollelihanqi/vite-plugin-element-plus-theme-builder.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Hollelihanqi/vite-plugin-element-plus-theme-builder/issues"
+  },
+  "homepage": "https://github.com/Hollelihanqi/vite-plugin-element-plus-theme-builder#readme",
+  "peerDependencies": {
+    "element-plus": "^2.0.0",
+    "sass": "^1.62.0",
+    "vite": "^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup --config tsup.config.ts",
+    "test": "vitest run",
+    "lint": "eslint src --max-warnings=0",
+    "prepublishOnly": "pnpm build"
+  }
+}

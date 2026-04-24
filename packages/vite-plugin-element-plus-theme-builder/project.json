@@ -1,0 +1,27 @@
+{
+  "name": "vite-plugin-element-plus-theme-builder",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/vite-plugin-element-plus-theme-builder/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --filter @dream/vite-plugin-element-plus-theme-builder build"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --filter @dream/vite-plugin-element-plus-theme-builder test"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --filter @dream/vite-plugin-element-plus-theme-builder lint"
+      }
+    }
+  },
+  "tags": ["scope:vite", "scope:element-plus", "type:plugin"]
+}
