@@ -1,6 +1,6 @@
 {
   "name": "@rdeam/vue-components-resolver",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A Vue component auto-import resolver for app-level src/components entries.",
   "repository": {
     "type": "git",
