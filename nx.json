@@ -27,5 +27,33 @@
       "cache": true
     }
   },
+  "release": {
+    "projects": ["utils", "vue-components-resolver", "vite-plugin-element-plus-theme-builder"],
+    "projectsRelationship": "independent",
+    "releaseTag": {
+      "pattern": "{projectName}@{version}"
+    },
+    "version": {
+      "specifierSource": "conventional-commits",
+      "currentVersionResolver": "git-tag",
+      "fallbackCurrentVersionResolver": "disk",
+      "preVersionCommand": "pnpm verify",
+      "updateDependents": "auto"
+    },
+    "changelog": {
+      "automaticFromRef": true,
+      "workspaceChangelog": false,
+      "projectChangelogs": {
+        "file": "{projectRoot}/CHANGELOG.md",
+        "createRelease": false
+      }
+    },
+    "git": {
+      "commit": true,
+      "commitMessage": "chore(release): publish",
+      "tag": true,
+      "push": false
+    }
+  },
   "plugins": []
 }

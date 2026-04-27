@@ -11,6 +11,7 @@
     "build": "nx run-many -t build",
     "test": "nx run-many -t test",
     "lint": "nx run-many -t lint",
+    "verify": "pnpm format:check && pnpm lint && pnpm test && pnpm pack:check",
     "pack:check": "pnpm build && pnpm -r exec publint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -18,6 +19,12 @@
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "pnpm build && changeset publish",
+    "release:nx": "nx release --yes",
+    "release:nx:dry": "nx release --dry-run --skip-publish",
+    "release:nx:patch": "nx release patch --yes",
+    "release:nx:minor": "nx release minor --yes",
+    "release:nx:major": "nx release major --yes",
+    "release:nx:push": "git push && git push --tags",
     "graph": "nx graph"
   },
   "lint-staged": {
@@ -32,6 +39,7 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "@parcel/watcher",
+      "@swc/core",
       "esbuild",
       "nx"
     ]
@@ -39,6 +47,9 @@
   "devDependencies": {
     "@changesets/cli": "^2.31.0",
     "@eslint/js": "^10.0.1",
+    "@nx/js": "22.6.5",
+    "@swc-node/register": "^1.11.1",
+    "@swc/core": "^1.15.30",
     "@types/node": "^25.6.0",
     "element-plus": "^2.13.7",
     "eslint": "^10.2.1",
