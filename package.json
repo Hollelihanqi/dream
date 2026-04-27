@@ -14,10 +14,20 @@
     "pack:check": "pnpm build && pnpm -r exec publint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "prepare": "husky",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "pnpm build && changeset publish",
     "graph": "nx graph"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,mjs,cjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml,css,scss}": [
+      "prettier --write"
+    ]
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -32,6 +42,8 @@
     "@types/node": "^25.6.0",
     "element-plus": "^2.13.7",
     "eslint": "^10.2.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "nx": "^22.6.5",
     "prettier": "^3.8.3",
     "publint": "^0.3.18",
