@@ -1,5 +1,11 @@
 # @rdeam/pinia-plugin-uni-persist-next
 
+## 1.0.1
+
+### Patch Changes
+
+- e48ea75: 首次发布pinia-ubi-app 缓存插件
+
 ## 1.3.4
 
 ### Patch Changes
