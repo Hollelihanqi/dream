@@ -34,6 +34,47 @@ interface ResolvedOptions {
 
 type BuildCommand = 'serve' | 'build';
 
+const DEFAULT_ALWAYS_INCLUDE_COMPONENTS = [
+  'base',
+  'message',
+  'message-box',
+  'notification',
+  'loading',
+  'autocomplete',
+  'button',
+  'cascader',
+  'cascader-panel',
+  'checkbox',
+  'checkbox-button',
+  'checkbox-group',
+  'color-picker',
+  'color-picker-panel',
+  'date-picker',
+  'date-picker-panel',
+  'form',
+  'form-item',
+  'input',
+  'input-number',
+  'input-tag',
+  'mention',
+  'option',
+  'option-group',
+  'radio',
+  'radio-button',
+  'radio-group',
+  'rate',
+  'segmented',
+  'select',
+  'select-v2',
+  'slider',
+  'switch',
+  'time-picker',
+  'time-select',
+  'transfer',
+  'tree-select',
+  'upload',
+];
+
 const DEFAULT_OPTIONS: ResolvedOptions = {
   outputCssPath: 'src/assets/generated/element-plus-theme.css',
   scanSourceDir: 'src',
@@ -47,7 +88,7 @@ const DEFAULT_OPTIONS: ResolvedOptions = {
     error: '#f56c6c',
     info: '#909399',
   },
-  alwaysIncludeComponents: ['base', 'message', 'message-box', 'notification', 'loading'],
+  alwaysIncludeComponents: DEFAULT_ALWAYS_INCLUDE_COMPONENTS,
 };
 
 const normalizePath = (targetPath: string) => targetPath.replace(/\\/g, '/');
