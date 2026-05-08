@@ -1,5 +1,11 @@
 # @rdeam/vite-plugin-element-plus-theme-builder
 
+## 0.1.4
+
+### Patch Changes
+
+- fa8a7d0: 默认包含 Element Plus 表单控件主题样式
+
 ## 0.1.3
 
 ### Patch Changes
