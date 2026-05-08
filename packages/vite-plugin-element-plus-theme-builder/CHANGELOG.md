@@ -1,5 +1,11 @@
 # @rdeam/vite-plugin-element-plus-theme-builder
 
+## 0.1.5
+
+### Patch Changes
+
+- e48ea75: vite 实时执行 css 丢失问题
+
 ## 0.1.4
 
 ### Patch Changes
