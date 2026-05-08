@@ -20,6 +20,9 @@
       "@rdeam/vite-plugin-element-plus-theme-builder": [
         "packages/vite-plugin-element-plus-theme-builder/src/index.ts"
       ],
+      "@rdeam/pinia-plugin-uni-persist-next": [
+        "packages/pinia-plugin-uni-persist-next/src/index.ts"
+      ],
       "@rdeam/vue-components-resolver": ["packages/vue-components-resolver/src/index.ts"],
       "@rdeam/utils": ["packages/utils/src/index.ts"]
     }

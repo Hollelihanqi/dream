@@ -28,7 +28,12 @@
     }
   },
   "release": {
-    "projects": ["utils", "vue-components-resolver", "vite-plugin-element-plus-theme-builder"],
+    "projects": [
+      "utils",
+      "vue-components-resolver",
+      "vite-plugin-element-plus-theme-builder",
+      "pinia-plugin-uni-persist-next"
+    ],
     "projectsRelationship": "independent",
     "releaseTag": {
       "pattern": "{projectName}@{version}"

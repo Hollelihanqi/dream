@@ -1,0 +1,27 @@
+{
+  "name": "pinia-plugin-uni-persist-next",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/pinia-plugin-uni-persist-next/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --filter @rdeam/pinia-plugin-uni-persist-next build"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --filter @rdeam/pinia-plugin-uni-persist-next test"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --filter @rdeam/pinia-plugin-uni-persist-next lint"
+      }
+    }
+  },
+  "tags": ["scope:uni-app", "type:pinia-plugin"]
+}
