@@ -1,6 +1,6 @@
 {
   "name": "@rdeam/vite-plugin-element-plus-theme-builder",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "description": "Build Element Plus theme CSS with custom colors during Vite serve/build.",
   "type": "module",
   "main": "./dist/index.cjs",
