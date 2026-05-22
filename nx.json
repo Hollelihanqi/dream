@@ -36,7 +36,7 @@
     ],
     "projectsRelationship": "independent",
     "releaseTag": {
-      "pattern": "{projectName}@{version}"
+      "pattern": "@rdeam/{projectName}@{version}"
     },
     "version": {
       "specifierSource": "conventional-commits",
@@ -60,5 +60,6 @@
       "push": false
     }
   },
-  "plugins": []
+  "plugins": [],
+  "analytics": true
 }
