@@ -3,7 +3,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { compileStringAsync } from 'sass';
-import type { Plugin } from 'vite';
+import type { HtmlTagDescriptor, Plugin } from 'vite';
 
 export interface ThemeColorPalette {
   /** Element Plus 主色。 */
@@ -21,82 +21,60 @@ export interface ThemeColorPalette {
 }
 
 export interface ElementPlusThemePluginOptions {
-  /** 生成后的主题 CSS 文件路径，相对 Vite 项目根目录。 */
-  outputCssPath?: string;
-  /** 构建时扫描组件使用情况的源码目录。 */
-  scanSourceDir?: string;
-  /** 哪些文件参与组件扫描。 */
-  scanFilePattern?: RegExp;
-  /** Element Plus theme-chalk 的 SCSS 源码目录。 */
+  /** Element Plus theme-chalk 的 SCSS 源码目录，默认相对项目根。 */
   elementPlusThemeChalkDir?: string;
   /** 需要覆盖的 Element Plus 主题色。 */
   colors?: Partial<ThemeColorPalette>;
-  /** 无论扫描结果如何，都始终打进主题 CSS 的组件样式。 */
+  /** 无论模块图是否扫描到，都强制包含的组件。 */
   alwaysIncludeComponents?: string[];
+  /** 哪些模块 id 参与组件扫描。 */
+  scanFilePattern?: RegExp;
+  /** 跳过扫描的 id 模式，命中任意一条即不扫描。 */
+  scanIgnore?: RegExp[];
+  /** 注入 <link> 的位置。 */
+  injectTo?: 'head' | 'head-prepend' | 'body' | 'body-prepend';
 }
 
 /** 插件内部统一使用补齐默认值后的配置，避免后续逻辑反复判断 undefined。 */
 interface ResolvedOptions {
-  outputCssPath: string;
-  scanSourceDir: string;
-  scanFilePattern: RegExp;
   elementPlusThemeChalkDir: string;
   colors: ThemeColorPalette;
   alwaysIncludeComponents: string[];
+  scanFilePattern: RegExp;
+  scanIgnore: RegExp[];
+  injectTo: 'head' | 'head-prepend' | 'body' | 'body-prepend';
 }
 
 type BuildCommand = 'serve' | 'build';
 
 /**
- * 构建模式会按需扫描使用到的 Element Plus 组件。
- * 但有些组件经常由函数式 API、动态组件、插件或运行时创建，源码里不一定能被正则扫描到。
- * 这些基础组件默认强制包含，避免生产 CSS 缺少弹窗、消息、表单基础样式。
+ * 默认强制包含的组件白名单。
+ *
+ * transform hook 已经能跟着 Vite 模块图扫到所有出现在源码 / 编译产物 / 第三方包里的
+ * `<el-xxx>`、`ElXxx`、`resolveComponent("el-xxx")` 形态。所以**普通模板组件不需要**
+ * 写在这个名单里——他们一定会被扫到。
+ *
+ * 真正需要硬白名单兜底的，只有以下这两类静态扫描原理上无法识别的：
+ *
+ *   1. 函数式 API：用户写的是 `ElMessage(...)` / `ElMessageBox(...)` /
+ *      `ElNotification(...)` / `ElLoading.service(...)` 这种调用，
+ *      没有对应的 `<el-message>` 标签或 `ElMessage` 类型符——其中 `ElMessage` 这种
+ *      标识符虽然能被 PascalCase 正则匹配，但为了保险显式声明。
+ *   2. 这些函数式 API 弹出的遮罩 / 容器样式（`overlay`）和全局基础样式（`base`）。
+ *
+ * 其它组件（table / dialog / menu / breadcrumb / card 等）请相信 transform hook，
+ * 它们会被自动扫到，不要为了"心安"硬塞进来，否则会让最终 CSS 比应有的大一圈。
  */
 const DEFAULT_ALWAYS_INCLUDE_COMPONENTS = [
   'base',
+  'overlay',
   'message',
   'message-box',
   'notification',
   'loading',
-  'autocomplete',
-  'button',
-  'cascader',
-  'cascader-panel',
-  'checkbox',
-  'checkbox-button',
-  'checkbox-group',
-  'color-picker',
-  'color-picker-panel',
-  'date-picker',
-  'date-picker-panel',
-  'form',
-  'form-item',
-  'input',
-  'input-number',
-  'input-tag',
-  'mention',
-  'option',
-  'option-group',
-  'radio',
-  'radio-button',
-  'radio-group',
-  'rate',
-  'segmented',
-  'select',
-  'select-v2',
-  'slider',
-  'switch',
-  'time-picker',
-  'time-select',
-  'transfer',
-  'tree-select',
-  'upload',
 ];
 
 const DEFAULT_OPTIONS: ResolvedOptions = {
-  outputCssPath: 'src/assets/generated/element-plus-theme.css',
-  scanSourceDir: 'src',
-  scanFilePattern: /\.(vue|jsx|tsx)$/,
   elementPlusThemeChalkDir: 'node_modules/element-plus/theme-chalk/src',
   colors: {
     primary: '#215476',
@@ -107,9 +85,25 @@ const DEFAULT_OPTIONS: ResolvedOptions = {
     info: '#909399',
   },
   alwaysIncludeComponents: DEFAULT_ALWAYS_INCLUDE_COMPONENTS,
+  scanFilePattern: /\.(vue|jsx|tsx|ts|js|mjs|cjs)$/,
+  scanIgnore: [],
+  injectTo: 'head',
 };
 
-/** 统一路径分隔符，避免 Windows 反斜杠影响 Vite id 对比和 Sass import。 */
+/** dev 模式下中间件吐 CSS 的固定路径，不可配置以保持简单。 */
+const DEV_VIRTUAL_CSS_PATHNAME = '/__element-plus-theme.css';
+
+const withBase = (base: string, pathname: string) => {
+  const normalizedPathname = pathname.replace(/^\//, '');
+
+  if (!base || base === '/') {
+    return `/${normalizedPathname}`;
+  }
+
+  return `${base.endsWith('/') ? base : `${base}/`}${normalizedPathname}`;
+};
+
+/** 统一路径分隔符，避免 Windows 反斜杠影响 Sass import。 */
 const normalizePath = (targetPath: string) => targetPath.replace(/\\/g, '/');
 
 /** Sass @use/@forward 的相对路径必须带 ./ 或 ../，这里统一补齐。 */
@@ -121,6 +115,18 @@ const ensureRelativeImportPath = (targetPath: string) => {
   }
 
   return `./${normalizedPath}`;
+};
+
+const getThemeChalkSrcDir = (root: string, themeChalkDir: string) => {
+  return path.isAbsolute(themeChalkDir) ? themeChalkDir : path.resolve(root, themeChalkDir);
+};
+
+const getAvailableThemeComponents = async (themeChalkSrcDir: string) => {
+  const files = await fs.readdir(themeChalkSrcDir);
+
+  return new Set(
+    files.filter((file) => file.endsWith('.scss')).map((file) => file.replace(/\.scss$/, '')),
+  );
 };
 
 /** 将模板里的 <el-button> 转成 theme-chalk 文件名 button。 */
@@ -137,9 +143,6 @@ const scriptToComponentName = (componentName: string) => {
 /** 合并用户配置和默认配置。 */
 const resolveOptions = (options: ElementPlusThemePluginOptions = {}): ResolvedOptions => {
   return {
-    outputCssPath: options.outputCssPath ?? DEFAULT_OPTIONS.outputCssPath,
-    scanSourceDir: options.scanSourceDir ?? DEFAULT_OPTIONS.scanSourceDir,
-    scanFilePattern: options.scanFilePattern ?? DEFAULT_OPTIONS.scanFilePattern,
     elementPlusThemeChalkDir:
       options.elementPlusThemeChalkDir ?? DEFAULT_OPTIONS.elementPlusThemeChalkDir,
     colors: {
@@ -148,13 +151,16 @@ const resolveOptions = (options: ElementPlusThemePluginOptions = {}): ResolvedOp
     },
     alwaysIncludeComponents:
       options.alwaysIncludeComponents ?? DEFAULT_OPTIONS.alwaysIncludeComponents,
+    scanFilePattern: options.scanFilePattern ?? DEFAULT_OPTIONS.scanFilePattern,
+    scanIgnore: options.scanIgnore ?? DEFAULT_OPTIONS.scanIgnore,
+    injectTo: options.injectTo ?? DEFAULT_OPTIONS.injectTo,
   };
 };
 
 /**
  * 生成临时 SCSS 入口。
  *
- * 这里先 @forward common/var.scss 并覆写 $colors，
+ * 先 @forward common/var.scss 并覆写 $colors，
  * 再 @use 需要的组件 SCSS。这样 Element Plus 每个组件都会使用同一套主题变量。
  */
 const createScssEntry = (
@@ -183,95 +189,19 @@ ${imports}
 `;
 };
 
-/**
- * 构建模式下扫描项目实际使用到的 Element Plus 组件。
- *
- * 开发模式不走这个扫描，因为 dev 直接使用 Element Plus 的 index.scss 全量样式，
- * 可以减少漏扫导致的样式缺失，也避免每次源码变化都重复生成 CSS。
- */
-const scanUsedComponents = async (root: string, options: ResolvedOptions) => {
-  const srcDir = path.resolve(root, options.scanSourceDir);
-  const usedComponents = new Set<string>(options.alwaysIncludeComponents);
-
-  const srcStat = await fs.stat(srcDir).catch(() => null);
-  if (!srcStat?.isDirectory()) {
-    return [...usedComponents].sort();
-  }
-
-  /** 递归遍历源码目录，按模板标签和脚本变量名收集组件。 */
-  const visit = async (targetPath: string): Promise<void> => {
-    const stat = await fs.stat(targetPath);
-
-    if (stat.isDirectory()) {
-      const children = await fs.readdir(targetPath);
-      await Promise.all(children.map((name) => visit(path.join(targetPath, name))));
-      return;
-    }
-
-    if (!options.scanFilePattern.test(targetPath)) {
-      return;
-    }
-
-    const source = await fs.readFile(targetPath, 'utf-8');
-    // 模板组件：<el-date-picker> -> date-picker。
-    const templateMatches = source.matchAll(/<\s*(el-[a-z0-9-]+)/g);
-    // 脚本组件/API：ElMessageBox -> message-box。
-    const scriptMatches = source.matchAll(/\b(El[A-Z][A-Za-z]+)\b/g);
-
-    for (const match of templateMatches) {
-      usedComponents.add(tagToComponentName(match[1]));
-    }
-
-    for (const match of scriptMatches) {
-      usedComponents.add(scriptToComponentName(match[1]));
-    }
-  };
-
-  await visit(srcDir);
-  return [...usedComponents].sort();
-};
-
-/**
- * 原子写入文件。
- *
- * 不能直接写 outputCssPath，因为 Vite dev server 或其它进程可能正好在读取这个 CSS。
- * 直接写有概率暴露“写了一半”的文件，页面就会出现组件样式缺失。
- * 先写临时文件，再 rename 到目标路径，可以让外部读者只看到旧完整文件或新完整文件。
- */
-const writeFileAtomic = async (targetPath: string, content: string) => {
-  const tempPath = `${targetPath}.${process.pid}.${Date.now()}.tmp`;
-
-  await fs.writeFile(tempPath, content, 'utf-8');
-  await fs.rename(tempPath, targetPath);
-};
-
-/**
- * 编译 Element Plus 主题 CSS。
- *
- * serve：
- * - 使用 index.scss 全量样式，保证开发时组件样式完整。
- * - 只返回 CSS 字符串，不写入真实文件。
- *
- * build：
- * - 扫描源码中实际使用到的组件，减少生产 CSS 体积。
- * - 返回 CSS 和输出路径，由调用方决定是否落盘。
- */
-const buildThemeCss = async (root: string, command: BuildCommand, options: ResolvedOptions) => {
-  const outputPath = path.resolve(root, options.outputCssPath);
-  const outputDir = path.dirname(outputPath);
-  const resolvedThemeChalkDir = path.isAbsolute(options.elementPlusThemeChalkDir)
-    ? options.elementPlusThemeChalkDir
-    : path.resolve(root, options.elementPlusThemeChalkDir);
-  const themeChalkSrcImportPath = ensureRelativeImportPath(
-    path.relative(root, resolvedThemeChalkDir),
-  );
-
-  // dev 使用全量 index；build 使用按需组件列表。
-  const componentNames = command === 'serve' ? ['index'] : await scanUsedComponents(root, options);
-  const source = createScssEntry(themeChalkSrcImportPath, componentNames, options.colors);
-
-  // build 模式需要目录存在；serve 模式虽然不写文件，但这里保留目录创建不会产生副作用。
-  await fs.mkdir(outputDir, { recursive: true });
+/** 编译指定组件列表的主题 CSS。 */
+const compileThemeCss = async (
+  root: string,
+  componentNames: string[],
+  colors: ThemeColorPalette,
+  themeChalkDir: string,
+  command: BuildCommand,
+): Promise<string> => {
+  const resolvedThemeChalkDir = getThemeChalkSrcDir(root, themeChalkDir);
+  const availableComponents = await getAvailableThemeComponents(resolvedThemeChalkDir);
+  const validComponentNames = componentNames.filter((name) => availableComponents.has(name));
+  const importPath = ensureRelativeImportPath(path.relative(root, resolvedThemeChalkDir));
+  const source = createScssEntry(importPath, validComponentNames, colors);
 
   const result = await compileStringAsync(source, {
     loadPaths: [root],
@@ -281,108 +211,153 @@ const buildThemeCss = async (root: string, command: BuildCommand, options: Resol
     url: pathToFileURL(path.join(root, '__element-plus-theme-builder__.scss')),
   });
 
-  return {
-    css: result.css,
-    outputDir,
-    outputPath,
-  };
+  return result.css;
+};
+
+/** 从源码字符串里收集 Element Plus 组件引用。 */
+const scanCode = (code: string, collected: Set<string>) => {
+  // <el-button> / <el-date-picker> 等 kebab-case 模板用法。
+  for (const match of code.matchAll(/<\s*(el-[a-z0-9-]+)/g)) {
+    collected.add(tagToComponentName(match[1]));
+  }
+  // ElButton / ElMessageBox 等 PascalCase 标识符（含模板和脚本）。
+  for (const match of code.matchAll(/\b(El[A-Z][A-Za-z]+)\b/g)) {
+    collected.add(scriptToComponentName(match[1]));
+  }
+  // resolveComponent("el-xxx") 兼容已经被预编译过的 .vue 模板。
+  for (const match of code.matchAll(/_?resolveComponent\s*\(\s*["'](el-[a-z0-9-]+)["']/g)) {
+    collected.add(tagToComponentName(match[1]));
+  }
+};
+
+/** 决定是否对某个模块 id 跑扫描。 */
+const shouldScan = (id: string, options: ResolvedOptions): boolean => {
+  // Rollup 虚拟模块 id 以 \0 开头，跳过避免对内部代理代码做无意义扫描。
+  if (id.startsWith('\0')) return false;
+  if (id.startsWith('virtual:')) return false;
+
+  const cleanId = normalizePath(id.split('?')[0]);
+
+  if (!options.scanFilePattern.test(cleanId)) return false;
+  if (options.scanIgnore.some((re) => re.test(cleanId))) return false;
+
+  return true;
 };
 
 const createPlugin = (rawOptions: ElementPlusThemePluginOptions = {}): Plugin => {
-  // Vite 项目根目录，在 configResolved 里拿到。
-  let root = '';
-  // 当前 Vite 命令：pnpm dev 是 serve，pnpm build 是 build。
-  let command: BuildCommand = 'serve';
-  // 目标 CSS 的绝对路径。
-  let outputPath = '';
-  // 标准化后的目标 CSS 绝对路径，用于和 Vite 模块 id 做比较。
-  let outputPathNormalized = '';
-  // dev 模式下的内存 CSS 内容。业务代码 import CSS 时，load hook 直接返回它。
-  let virtualThemeCss = '';
-  // 防止同一轮启动中并发触发多次编译。
-  let buildPromise: Promise<void> | null = null;
   const options = resolveOptions(rawOptions);
 
-  /** 判断当前 Vite 请求是否就是用户配置的 outputCssPath。 */
-  const isThemeCssRequest = (id: string) => {
-    const cleanId = id.split('?')[0];
-    return normalizePath(cleanId) === outputPathNormalized;
-  };
+  // Vite 项目根目录、命令、base 都在 configResolved 里拿到。
+  let root = '';
+  let command: BuildCommand = 'serve';
+  let base = '/';
 
-  /**
-   * 确保主题 CSS 已经生成。
-   *
-   * serve：
-   * - 编译一次后存入 virtualThemeCss。
-   * - 不写 outputCssPath，避免 dev server 读到半生成文件。
-   *
-   * build：
-   * - 编译后原子写入 outputCssPath。
-   */
-  const ensureThemeCss = () => {
-    if (!buildPromise) {
-      buildPromise = buildThemeCss(root, command, options).then(async (result) => {
-        virtualThemeCss = result.css;
-
-        if (command === 'build') {
-          await fs.mkdir(result.outputDir, { recursive: true });
-          await writeFileAtomic(result.outputPath, result.css);
-        }
-      });
-    }
-
-    return buildPromise;
-  };
+  // build 模式下随模块图累积出的组件集合。
+  let collected = new Set<string>(options.alwaysIncludeComponents);
+  // build 阶段 emitFile 之后回填的最终带 hash 文件名，给 transformIndexHtml 用。
+  let emittedAssetFileName = '';
+  // dev 模式下中间件吐出的内存 CSS。
+  let devThemeCss = '';
 
   return {
     name: 'element-plus-theme-builder',
-    // 提前拦截 CSS 模块解析，确保业务 import 的 generated CSS 被本插件接管。
+    // pre 确保 transform 看到的是未经其它插件改写的源码（特别是 .vue 文件的原始模板）。
     enforce: 'pre',
+
     configResolved(resolvedConfig) {
       root = resolvedConfig.root;
       command = resolvedConfig.command as BuildCommand;
-      outputPath = path.resolve(root, options.outputCssPath);
-      outputPathNormalized = normalizePath(outputPath);
+      base = resolvedConfig.base || '/';
     },
-    async buildStart() {
-      // 生产构建阶段要生成真实 CSS 文件，供构建结果和后续提交/发布使用。
+
+    buildStart() {
+      // watch 模式下 build 可能跑多次，每次都从干净集合开始，避免越攒越多。
       if (command === 'build') {
-        await ensureThemeCss();
+        collected = new Set<string>(options.alwaysIncludeComponents);
+        emittedAssetFileName = '';
       }
     },
-    async configureServer() {
-      // 开发服务启动时只预生成内存 CSS，不落盘。
-      await ensureThemeCss();
+
+    async configureServer(server) {
+      // dev 一次性编译全量主题到内存，后续中间件直接吐出。
+      devThemeCss = await compileThemeCss(
+        root,
+        ['index'],
+        options.colors,
+        options.elementPlusThemeChalkDir,
+        'serve',
+      );
+
+      // 关键：**同步**注册（不要 return 函数延后），这样我们的中间件位于
+      // Vite 内置 transformMiddleware / spaFallback 之前，能优先处理对
+      // 主题 CSS 的请求。否则 transformMiddleware 会把这个虚拟 URL 当成
+      // 找不到的模块返回一个空占位响应，最终样式全没。
+      //
+      // 同时把 base 拼进 mount 路径——因为我们在 baseMiddleware 之前，
+      // 此时 req.url 还带着 base 前缀。这样 base='/' 和 base='/sub/'
+      // 两种场景都能精确匹配上 transformIndexHtml 注入的 href。
+      const mountPath = `${base.replace(/\/$/, '')}${DEV_VIRTUAL_CSS_PATHNAME}`;
+
+      server.middlewares.use(mountPath, (_req, res) => {
+        res.setHeader('Content-Type', 'text/css; charset=utf-8');
+        res.end(devThemeCss);
+      });
     },
-    resolveId(id, importer) {
-      // build 模式交给 Vite 正常处理真实 CSS 文件；serve 模式由插件返回内存 CSS。
-      if (command !== 'serve') {
-        return null;
-      }
 
-      // 处理绝对路径导入。
-      if (path.isAbsolute(id) && isThemeCssRequest(id)) {
-        return outputPath;
-      }
+    transform(code, id) {
+      // 只在 build 阶段累积组件集合；dev 使用全量样式，不需要扫描。
+      if (command !== 'build') return null;
+      if (!shouldScan(id, options)) return null;
 
-      // 处理相对路径导入，例如 src/main.ts 中的 ./assets/generated/element-plus-theme.css。
-      if (importer) {
-        const resolvedId = path.resolve(path.dirname(importer.split('?')[0]), id);
-        if (isThemeCssRequest(resolvedId)) {
-          return outputPath;
-        }
-      }
-
+      scanCode(code, collected);
       return null;
     },
-    async load(id) {
-      // dev 模式下，用户 import 目标 CSS 文件时，直接返回内存 CSS 内容。
-      if (command !== 'serve' || !isThemeCssRequest(id)) {
-        return null;
-      }
 
-      await ensureThemeCss();
-      return virtualThemeCss;
+    async generateBundle() {
+      // 所有模块 transform 完成后才到 generateBundle，
+      // 此时 collected 是这次构建里 Vite 真正处理过的组件全集。
+      if (command !== 'build') return;
+
+      const componentNames = [...collected].sort();
+      const css = await compileThemeCss(
+        root,
+        componentNames,
+        options.colors,
+        options.elementPlusThemeChalkDir,
+        'build',
+      );
+
+      const referenceId = this.emitFile({
+        type: 'asset',
+        name: 'element-plus-theme.css',
+        source: css,
+      });
+      emittedAssetFileName = this.getFileName(referenceId);
+    },
+
+    transformIndexHtml: {
+      // post 确保所有 generateBundle 都跑完、emittedAssetFileName 已就位。
+      order: 'post',
+      handler(): HtmlTagDescriptor[] | undefined {
+        let href: string;
+
+        if (command === 'serve') {
+          href = withBase(base, DEV_VIRTUAL_CSS_PATHNAME);
+        } else if (emittedAssetFileName) {
+          href = withBase(base, emittedAssetFileName);
+        } else {
+          // build 模式下 generateBundle 没跑（极少见，比如 SSR 流程），不注入。
+          return undefined;
+        }
+
+        return [
+          {
+            tag: 'link',
+            attrs: { rel: 'stylesheet', href },
+            injectTo: options.injectTo,
+          },
+        ];
+      },
     },
   };
 };
