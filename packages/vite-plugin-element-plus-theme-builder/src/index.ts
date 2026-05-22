@@ -216,15 +216,28 @@ const compileThemeCss = async (
 
 /** 从源码字符串里收集 Element Plus 组件引用。 */
 const scanCode = (code: string, collected: Set<string>) => {
-  // <el-button> / <el-date-picker> 等 kebab-case 模板用法。
+  // 1) kebab-case 模板写法 `<el-button>`：用户自己 .vue 文件里最常见的形态。
+  //    我们注册了 enforce: 'pre' 的 transform，能在 @vitejs/plugin-vue 编译模板前
+  //    拿到原始 SFC 文本，所以这条正则在用户源码里命中率最高。
   for (const match of code.matchAll(/<\s*(el-[a-z0-9-]+)/g)) {
     collected.add(tagToComponentName(match[1]));
   }
-  // ElButton / ElMessageBox 等 PascalCase 标识符（含模板和脚本）。
+
+  // 2) PascalCase 标识符 `ElButton` / `ElMessageBox` 等。一次性覆盖三类场景：
+  //    - 模板里的 PascalCase 标签 `<ElButton>`
+  //    - 脚本里的具名 import `import { ElButton } from 'element-plus'`
+  //    - unplugin-vue-components 自动注入的
+  //      `import { ElButton as __unplugin_components_x } from 'element-plus'`
   for (const match of code.matchAll(/\b(El[A-Z][A-Za-z]+)\b/g)) {
     collected.add(scriptToComponentName(match[1]));
   }
-  // resolveComponent("el-xxx") 兼容已经被预编译过的 .vue 模板。
+
+  // 3) `resolveComponent("el-xxx")` —— 兜底匹配已经被编译过的 Vue 模板。
+  //    场景：node_modules 里第三方 Vue 库通常是预编译 .js 形态发布的，原始
+  //    `<el-button>` 已经被编译成 `_resolveComponent("el-button")` 调用，
+  //    源里既没有 `<el-button>` 字面量、也没有 `ElButton` 标识符，前两条都抓不到。
+  //    `_?` 前缀是因为 Vue 编译产物里实际生成的是 `_resolveComponent`（带下划线
+  //    的内部别名），保留无前缀的形态以覆盖直接手写调用。
   for (const match of code.matchAll(/_?resolveComponent\s*\(\s*["'](el-[a-z0-9-]+)["']/g)) {
     collected.add(tagToComponentName(match[1]));
   }
