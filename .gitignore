@@ -9,3 +9,6 @@ coverage/
 .env.*
 !.env.example
 
+# Claude Code 本地配置（机器特定，不应进版本控制）
+.claude/
+

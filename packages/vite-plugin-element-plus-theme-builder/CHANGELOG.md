@@ -19,17 +19,6 @@
   - `scanIgnore` 性能调优配置
   - `injectTo` 控制 `<link>` 注入位置
 
-- 0054968: 重写为基于 Vite 模块图的 transform 扫描 + emitFile asset 自动注入。
-
-## Unreleased
-
-### Minor Changes
-
-- Reworked production CSS generation to scan Vite-transformed modules instead of walking a
-  fixed source directory.
-- Emits the generated theme as a Vite build asset and injects it into HTML automatically.
-- Removes the need to import a generated `src/assets/generated/element-plus-theme.css` file.
-
 ## 0.1.5
 
 ### Patch Changes

@@ -5,7 +5,10 @@
       "Bash(pnpm lint *)",
       "Bash(pnpm build *)",
       "Bash(node *)",
-      "Bash(pnpm *)"
+      "Bash(pnpm *)",
+      "Bash(chmod +x /e/Dr/dream/.husky/commit-msg)",
+      "Bash(echo \"---exit: $?---\")",
+      "Bash(echo \"exit: $?\")"
     ]
   }
 }
