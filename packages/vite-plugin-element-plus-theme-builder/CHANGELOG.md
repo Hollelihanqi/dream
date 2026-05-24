@@ -1,3 +1,13 @@
+## 0.2.1 (2026-05-24)
+
+### 🩹 Fixes
+
+- **vite-plugin-element-plus-theme-builder:** 完善组件扫描正则的内联注释 ([1e356eb](https://github.com/Hollelihanqi/dream/commit/1e356eb))
+
+### ❤️ Thank You
+
+- lihanqi
+
 # @rdeam/vite-plugin-element-plus-theme-builder
 
 ## 0.2.0
