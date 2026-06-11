@@ -6,7 +6,9 @@
 
 - Uses UniApp storage APIs with synchronous restore and async writes by default.
 - Supports per-store persistence strategies and path filtering.
-- Handles `Date`, circular references and `BigInt` values during serialization.
+- Round-trips `Date` and `BigInt` values; drops circular references safely on restore.
+- Skips `undefined` fields instead of persisting `null`, keeping initial state intact.
+- Warns when a single key exceeds 1MB (the WeChat mini-program per-key limit).
 - Provides TypeScript types for Pinia `persist` options.
 
 ## Install
@@ -65,9 +67,18 @@ export const useUserStore = defineStore('user', {
 ```ts
 import { clearAll, clearStore } from '@rdeam/pinia-plugin-uni-persist-next';
 
+// 删除单个 key（需传入含 keyPrefix 的完整 key）
 clearStore('app_storage_user');
+
+// 只清空指定前缀下的持久化数据（推荐，与插件 keyPrefix 保持一致）
+clearAll('app_storage_');
+
+// 不传前缀时清空整个 uni storage（包括非本插件写入的数据，慎用）
 clearAll();
 ```
+
+> 注意：业务 state 中请勿使用 `__piniaPersistDate` / `__piniaPersistBigInt` 字段名，
+> 它们是插件还原 `Date` / `BigInt` 的保留标记。
 
 ## License
 
