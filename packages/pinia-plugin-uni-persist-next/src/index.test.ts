@@ -10,7 +10,12 @@ const storage = new Map<string, unknown>();
 const createContext = (persist?: PersistOptions) => {
   let subscription: SubscribeHandler | undefined;
 
-  const store = {
+  const store: Record<string, unknown> & {
+    $id: string;
+    $patch: ReturnType<typeof vi.fn>;
+    $reset: () => void;
+    $subscribe: ReturnType<typeof vi.fn>;
+  } = {
     $id: 'user',
     $patch: vi.fn(),
     $reset: vi.fn(),
@@ -36,6 +41,7 @@ beforeEach(() => {
 
   vi.stubGlobal('uni', {
     getStorageSync: vi.fn((key: string) => storage.get(key)),
+    getStorageInfoSync: vi.fn(() => ({ keys: [...storage.keys()] })),
     setStorage: vi.fn(({ key, data }: { key: string; data: unknown }) => {
       storage.set(key, data);
     }),
@@ -99,6 +105,77 @@ describe('createUniPersistPlugin', () => {
     expect(store.$patch).toHaveBeenLastCalledWith({ savedAt });
   });
 
+  it('round-trips bigint values', () => {
+    const { ctx, store, trigger } = createContext({
+      enabled: true,
+    });
+
+    createUniPersistPlugin()(ctx);
+    trigger({ amount: 9007199254740993n });
+
+    createUniPersistPlugin()(ctx);
+
+    expect(store.$patch).toHaveBeenLastCalledWith({ amount: 9007199254740993n });
+  });
+
+  it('serializes shared references without marking them circular', () => {
+    const { ctx, trigger } = createContext({
+      enabled: true,
+    });
+
+    createUniPersistPlugin()(ctx);
+
+    const shared = { city: 'SH' };
+    trigger({ home: shared, company: shared });
+
+    expect(storage.get('user')).toBe(
+      JSON.stringify({ home: { city: 'SH' }, company: { city: 'SH' } }),
+    );
+  });
+
+  it('drops circular references instead of restoring placeholder strings', () => {
+    const { ctx, store, trigger } = createContext({
+      enabled: true,
+    });
+
+    createUniPersistPlugin()(ctx);
+
+    const node: Record<string, unknown> = { name: 'root' };
+    node.self = node;
+    trigger({ node });
+
+    expect(storage.get('user')).toContain('[Circular]');
+
+    createUniPersistPlugin()(ctx);
+
+    expect(store.$patch).toHaveBeenLastCalledWith({ node: { name: 'root' } });
+  });
+
+  it('drops undefined fields instead of persisting null', () => {
+    const { ctx, trigger } = createContext({
+      enabled: true,
+    });
+
+    createUniPersistPlugin()(ctx);
+    trigger({ token: 'abc', draft: undefined });
+
+    expect(storage.get('user')).toBe(JSON.stringify({ token: 'abc' }));
+  });
+
+  it('ignores corrupted persisted data', () => {
+    storage.set('user', '{invalid json');
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { ctx, store } = createContext({
+      enabled: true,
+    });
+
+    createUniPersistPlugin()(ctx);
+
+    expect(store.$patch).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
   it('uses synchronous storage when async is disabled', () => {
     const { ctx, trigger } = createContext({
       enabled: true,
@@ -122,6 +199,24 @@ describe('createUniPersistPlugin', () => {
 
     expect(storage.has('app_user')).toBe(false);
   });
+
+  it('does not re-persist state from the subscription fired by $reset', () => {
+    const { ctx, store, trigger } = createContext({
+      enabled: true,
+    });
+
+    createUniPersistPlugin()(ctx);
+
+    store.$reset();
+    // 模拟 reset 内部 $patch 触发的订阅回调（flush: 'post' 时发生在 removeStorage 之后）
+    trigger({ token: '' });
+
+    expect(storage.has('user')).toBe(false);
+
+    // 后续正常 mutation 恢复写入
+    trigger({ token: 'next' });
+    expect(storage.get('user')).toBe(JSON.stringify({ token: 'next' }));
+  });
 });
 
 describe('storage utilities', () => {
@@ -134,5 +229,15 @@ describe('storage utilities', () => {
 
     clearAll();
     expect(storage.size).toBe(0);
+  });
+
+  it('clears only prefixed keys when a prefix is provided', () => {
+    storage.set('app_user', '{}');
+    storage.set('other', '{}');
+
+    clearAll('app_');
+
+    expect(storage.has('app_user')).toBe(false);
+    expect(storage.has('other')).toBe(true);
   });
 });
