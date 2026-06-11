@@ -1,6 +1,6 @@
 {
   "name": "@rdeam/pinia-plugin-uni-persist-next",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "A Pinia persistence plugin designed for UniApp storage.",
   "type": "module",
   "main": "./dist/index.cjs",
